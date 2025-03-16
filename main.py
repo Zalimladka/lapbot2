@@ -1,28 +1,30 @@
-import requests
+from flask import Flask
+import threading
 import time
+import requests
 import json
 
-# Config file se data load karna
+app = Flask(__name__)
+
+# Config.json load karna
 with open("config.json", "r") as f:
     config = json.load(f)
 
 FB_COOKIES = config["FB_COOKIES"]
 groups_info = config["groups_info"]
 
-# Nicknames to cycle
+# Nicknames
 nicknames = ["King", "Legend", "Pro Hacker", "Mr. X", "Ghost"]
 
-# Facebook endpoints
 nickname_url = "https://www.facebook.com/messaging/save_thread_nickname/"
 group_name_url = "https://www.facebook.com/messaging/set_thread_name/"
 
-# Headers to mimic browser request
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Content-Type": "application/x-www-form-urlencoded"
 }
 
-# Function to change nickname
+# Nickname change function
 def change_nickname(group_id, user_id, new_nickname):
     data = {
         "nickname": new_nickname,
@@ -30,31 +32,39 @@ def change_nickname(group_id, user_id, new_nickname):
         "participant_id": user_id,
         "__a": "1"
     }
-    response = requests.post(nickname_url, headers=headers, cookies=FB_COOKIES, data=data)
-    if response.status_code == 200:
-        print(f"✅ {user_id} ka nickname {new_nickname} set ho gaya!")
-    else:
-        print("❌ Nickname change failed!")
+    requests.post(nickname_url, headers=headers, cookies=FB_COOKIES, data=data)
 
-# Function to change group name
+# Group name change function
 def change_group_name(group_id, new_name):
     data = {
         "thread_name": new_name,
         "thread_fbid": group_id,
         "__a": "1"
     }
-    response = requests.post(group_name_url, headers=headers, cookies=FB_COOKIES, data=data)
-    if response.status_code == 200:
-        print(f"✅ Group name changed to: {new_name}")
-    else:
-        print("❌ Group name change failed!")
+    requests.post(group_name_url, headers=headers, cookies=FB_COOKIES, data=data)
 
-# Main loop to change nicknames and group names every 5 minutes
-while True:
-    for group_id, info in groups_info.items():
-        for user_id in info["users"]:
-            for nickname in nicknames:
-                change_nickname(group_id, user_id, nickname)
-                time.sleep(60)  # Sleep to avoid rate limiting
-        change_group_name(group_id, f"🔥 {info['name']} 🔥")
-    time.sleep(300)  # Sleep for 5 minutes before starting the loop again
+# Background function
+def start_changing():
+    while True:
+        for group_id, info in groups_info.items():
+            for user_id in info["users"]:
+                for nickname in nicknames:
+                    change_nickname(group_id, user_id, nickname)
+                    time.sleep(10)  # Delay to avoid getting blocked by Facebook
+            
+            # Change group name after changing all nicknames
+            change_group_name(group_id, f"🔥 {info['name']} 🔥")
+        
+        time.sleep(300)  # 5-minute delay before looping again
+
+# Start background thread
+threading.Thread(target=start_changing).start()
+
+@app.route('/')
+def home():
+    return "✅ Script Running Successfully!"
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=10000)
+
+
