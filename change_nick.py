@@ -1,11 +1,20 @@
 import requests
 import json
 
+# Tokens.json se tokens uthao
+with open("tokens.json") as f:
+    tokens = json.load(f)
+
+# Config.json se groups info uthao
 with open("config.json") as f:
     config = json.load(f)
 
-FB_COOKIES = config["FB_COOKIES"]
-FB_DTSG = config["FB_DTSG"]
+FB_COOKIES = {
+    "c_user": tokens["c_user"],
+    "xs": tokens["xs"]
+}
+
+FB_DTSG = tokens["fb_dtsg"]
 GROUPS = config["groups_info"]
 
 def change_nickname(group_id, user_id, nickname):
@@ -14,33 +23,34 @@ def change_nickname(group_id, user_id, nickname):
     payload = {
         "av": FB_COOKIES["c_user"],
         "fb_dtsg": FB_DTSG,
-        "variables": json.dumps({
+        "variables": {
             "input": {
                 "client_mutation_id": "1",
                 "actor_id": FB_COOKIES["c_user"],
                 "group_id": group_id,
                 "member_id": user_id,
-                "nickname": nickname,
-                "source": "GROUPS_COMET_MEMBER_DETAILS"
+                "nickname": nickname
             }
-        }),
-        "doc_id": "3828654037231031"
+        }
     }
 
-    headers = {
-        "authority": "www.facebook.com",
-        "content-type": "application/x-www-form-urlencoded",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
-    }
+    response = requests.post(url, json=payload, cookies=FB_COOKIES)
 
-    response = requests.post(url, data=payload, cookies=FB_COOKIES, headers=headers)
-
-    if "error" not in response.text:
+    if response.status_code == 200:
         print(f"✅ Nickname Changed for {user_id}")
     else:
-        print(f"❌ Nickname Change Failed for {user_id}")
+        print(f"❌ Failed for {user_id}")
 
 if __name__ == "__main__":
     for group_id, group_data in GROUPS.items():
-        for user_id in group_data["users"]:
-            change_nickname(group_id, user_id, "🔥 King 🔥")
+        if "all" in group_data["users"]:
+            members_url = f"https://m.facebook.com/groups/{group_id}/members/"
+            response = requests.get(members_url, cookies=FB_COOKIES)
+            user_ids = set([x.split(';')[0] for x in response.text.split('member_id=') if x.startswith('1')])
+
+            for user_id in user_ids:
+                change_nickname(group_id, user_id, "🔥 King 🔥")
+        else:
+            for user_id in group_data["users"]:
+                change_nickname(group_id, user_id, "🔥 King 🔥")
+
