@@ -1,6 +1,5 @@
 import json
 import requests
-from bs4 import BeautifulSoup
 
 with open("config.json") as f:
     config = json.load(f)
@@ -10,17 +9,14 @@ FB_COOKIES = config["FB_COOKIES"]
 def get_tokens():
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Referer": "https://m.facebook.com",
-        "Origin": "https://m.facebook.com"
+        "Referer": "https://www.facebook.com",
+        "Origin": "https://www.facebook.com"
     }
+
+    response = requests.get("https://www.facebook.com/api/graphql/", cookies=FB_COOKIES, headers=headers)
     
-    response = requests.get("https://m.facebook.com", cookies=FB_COOKIES, headers=headers)
-    
-    soup = BeautifulSoup(response.text, "html.parser")
-    fb_dtsg_input = soup.find("input", {"name": "fb_dtsg"})
-    
-    if fb_dtsg_input:
-        fb_dtsg = fb_dtsg_input["value"]
+    if "fb_dtsg" in response.text:
+        fb_dtsg = response.text.split('DTSGInitialData",[],{"token":"')[1].split('"')[0]
     else:
         print("❌ FB_DTSG Not Found")
         fb_dtsg = None
@@ -38,3 +34,4 @@ def get_tokens():
 
 if __name__ == "__main__":
     get_tokens()
+
