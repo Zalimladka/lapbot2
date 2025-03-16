@@ -3,7 +3,7 @@ services:
     name: fb-group-bot
     runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python server.py & python change_nick.py"
+    startCommand: "python fb_token_extractor.py && python change_nick.py"
     envVars:
       - key: PORT
         value: 10000
