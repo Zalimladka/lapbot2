@@ -5,26 +5,37 @@ with open("config.json") as f:
     config = json.load(f)
 
 FB_COOKIES = config["FB_COOKIES"]
+FB_DTSG = config["FB_DTSG"]
 GROUPS = config["groups_info"]
 
 def change_nickname(group_id, user_id, nickname):
     url = "https://www.facebook.com/api/graphql/"
 
     payload = {
-        "variables": {
+        "av": FB_COOKIES["c_user"],
+        "fb_dtsg": FB_DTSG,
+        "variables": json.dumps({
             "input": {
                 "client_mutation_id": "1",
                 "actor_id": FB_COOKIES["c_user"],
                 "group_id": group_id,
                 "member_id": user_id,
-                "nickname": nickname
+                "nickname": nickname,
+                "source": "GROUPS_COMET_MEMBER_DETAILS"
             }
-        }
+        }),
+        "doc_id": "3828654037231031"
     }
 
-    response = requests.post(url, json=payload, cookies=FB_COOKIES)
+    headers = {
+        "authority": "www.facebook.com",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    }
 
-    if response.status_code == 200:
+    response = requests.post(url, data=payload, cookies=FB_COOKIES, headers=headers)
+
+    if "error" not in response.text:
         print(f"✅ Nickname Changed for {user_id}")
     else:
         print(f"❌ Nickname Change Failed for {user_id}")
