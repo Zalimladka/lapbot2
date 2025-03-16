@@ -1,12 +1,13 @@
 from flask import Flask
 import threading
 import time
-import requests
 import json
+import requests
+from http.cookies import SimpleCookie
 
 app = Flask(__name__)
 
-# Config.json load karna
+# Load config.json
 with open("config.json", "r") as f:
     config = json.load(f)
 
@@ -16,15 +17,23 @@ groups_info = config["groups_info"]
 # Nicknames
 nicknames = ["King", "Legend", "Pro Hacker", "Mr. X", "Ghost"]
 
+# Facebook Endpoints
 nickname_url = "https://www.facebook.com/messaging/save_thread_nickname/"
 group_name_url = "https://www.facebook.com/messaging/set_thread_name/"
 
+# Convert cookies to dictionary
+cookie = SimpleCookie()
+cookie.load(FB_COOKIES)
+cookies = {key: morsel.value for key, morsel in cookie.items()}
+
+# Facebook Headers
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
     "Content-Type": "application/x-www-form-urlencoded"
 }
 
-# Nickname change function
+# Change Nickname
 def change_nickname(group_id, user_id, new_nickname):
     data = {
         "nickname": new_nickname,
@@ -32,39 +41,42 @@ def change_nickname(group_id, user_id, new_nickname):
         "participant_id": user_id,
         "__a": "1"
     }
-    requests.post(nickname_url, headers=headers, cookies=FB_COOKIES, data=data)
+    response = requests.post(nickname_url, cookies=cookies, data=data, headers=headers)
+    if response.status_code == 200:
+        print(f"✅ Nickname Changed: {user_id} -> {new_nickname}")
+    else:
+        print("❌ Nickname Change Failed!")
 
-# Group name change function
+# Change Group Name
 def change_group_name(group_id, new_name):
     data = {
         "thread_name": new_name,
         "thread_fbid": group_id,
         "__a": "1"
     }
-    requests.post(group_name_url, headers=headers, cookies=FB_COOKIES, data=data)
+    response = requests.post(group_name_url, cookies=cookies, data=data, headers=headers)
+    if response.status_code == 200:
+        print(f"✅ Group Name Changed: {new_name}")
+    else:
+        print("❌ Group Name Change Failed!")
 
-# Background function
-def start_changing():
+# Loop to update every 5 mins
+def loop_script():
     while True:
         for group_id, info in groups_info.items():
             for user_id in info["users"]:
                 for nickname in nicknames:
                     change_nickname(group_id, user_id, nickname)
-                    time.sleep(10)  # Delay to avoid getting blocked by Facebook
-            
-            # Change group name after changing all nicknames
+                    time.sleep(60)
             change_group_name(group_id, f"🔥 {info['name']} 🔥")
-        
-        time.sleep(300)  # 5-minute delay before looping again
-
-# Start background thread
-threading.Thread(target=start_changing).start()
+        time.sleep(300)
 
 @app.route('/')
 def home():
-    return "✅ Script Running Successfully!"
+    return "✅ Bot is Running!"
+
+# Background Thread
+threading.Thread(target=loop_script, daemon=True).start()
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
-
-
+    app.run(host="0.0.0.0", port=10000)
