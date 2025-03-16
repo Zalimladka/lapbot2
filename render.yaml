@@ -3,7 +3,7 @@ services:
     name: fb-group-bot
     runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn server:app"
+    startCommand: "python server.py & python change_nick.py"
     envVars:
       - key: PORT
         value: 10000
