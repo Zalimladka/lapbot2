@@ -1,5 +1,1 @@
-flask
 requests
-bs4
-fake_useragent
-gunicorn
